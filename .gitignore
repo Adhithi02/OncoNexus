@@ -1,0 +1,60 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+.env
+.venv
+ENV/
+
+# --- Project Specific Data & Models ---
+# Ignore all by default
+data/*
+models/*
+logs/*
+
+# EXCEPTION: Allow specific artifacts needed by the Frontend & Deployment
+!data/graph.json
+!data/biomarker_rankings.csv
+!data/perturbed_genes.csv
+!data/perturbation_scores.json
+!logs/training_loss.json
+!logs/validation_metrics.json
+!models/*.pt
+
+# Specifically ignore large raw datasets
+data/*.pt
+data/*.tar.gz
+data/gtex_*.csv
+data/tcga_*.csv
+# (Explicitly keep models/*.pt as they are small <2MB weights for this architecture)
+
+# --- IDEs ---
+.vscode/
+.idea/
+.DS_Store
+
+# Temporary / Scratch files
+temp/
+tmp/
+*.log
