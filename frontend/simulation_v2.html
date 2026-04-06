@@ -65,21 +65,96 @@ body::before {
   z-index: 1;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 100px 24px 60px; /* Increased for fixed nav */
+  padding: 32px 24px 60px;
 }
 
-/* ── nav ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(3,6,15,0.85);backdrop-filter:blur(20px)}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.logo-mark{width:32px;height:32px;display:grid;place-items:center;position:relative}
-.logo-mark img{width:100%;height:100%;object-fit:contain}
-.logo-name{font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:-0.3px;color:var(--text)}
-.logo-name span{color:var(--blue)}
-.nav-links{display:flex;gap:28px;list-style:none}
-.nav-links a{color:var(--muted);text-decoration:none;font-size:13px;transition:color .2s}
-.nav-links a:hover,.nav-links a.active{color:var(--text)}
-.nav-badge{font-family:var(--mono);font-size:11px;padding:4px 10px;border:1px solid rgba(77,159,255,0.3);border-radius:99px;color:var(--blue)}
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
 
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-mark {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--blue), var(--teal));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-mark img {
+  width: 24px; height: 24px;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Makes the logo white against gradient */
+}
+
+.logo-text {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.logo-text span { color: var(--teal); }
+
+.header-nav {
+  display: flex;
+  gap: 20px;
+  margin-left: 40px;
+  margin-right: auto;
+}
+
+.header-nav a {
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text2);
+  transition: all 0.2s;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.header-nav a:hover { color: var(--blue); background: var(--blue-dim); }
+.header-nav a.active { color: var(--blue); background: var(--blue-dim); border: 1px solid var(--border2); }
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text3);
+  transition: background 0.4s, box-shadow 0.4s;
+}
+.status-dot.active {
+  background: var(--teal);
+  box-shadow: 0 0 8px var(--teal);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
 @keyframes pulse-dot {
   0%,100%{opacity:1} 50%{opacity:0.5}
 }
@@ -595,23 +670,25 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:fl
 </head>
 <body>
 <div class="app">
-  <nav>
-    <a class="logo" href="index.html">
+  <div class="header">
+    <div class="logo" style="cursor:pointer" onclick="location.href='index.html'">
       <div class="logo-mark"><img src="assets/logo.png" alt="OncoNexus"></div>
-      <span class="logo-name">Onco<span>Nexus</span></span>
-    </a>
-    <ul class="nav-links">
-      <li><a href="index.html">Upload</a></li>
-      <li><a href="network.html">Network</a></li>
-      <li><a href="perturbation.html">Perturbation</a></li>
-      <li><a href="biomarkers.html">Biomarkers</a></li>
-      <li><a href="simulation_v2.html" class="active">Simulation</a></li>
-    </ul>
-    <div class="status-badge" style="display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-family: var(--mono); font-size: 11px; color: var(--text2);">
-      <div class="status-dot" id="status-dot" style="width: 6px; height: 6px; border-radius: 50%; background: var(--text3); transition: background 0.4s, box-shadow 0.4s;"></div>
+      <div class="logo-text">Onco<span>Nexus</span></div>
+    </div>
+    
+    <div class="header-nav">
+      <a href="index.html">Upload</a>
+      <a href="network.html">Network</a>
+      <a href="perturbation.html">Perturbation</a>
+      <a href="biomarkers.html">Biomarkers</a>
+      <a href="simulation_v2.html" class="active">Simulation</a>
+    </div>
+
+    <div class="status-badge">
+      <div class="status-dot" id="status-dot"></div>
       <span id="status-text">Ready</span>
     </div>
-  </nav>
+  </div>
 
   <!-- INTRO -->
   <div id="intro">
