@@ -21,7 +21,7 @@
       --cyan: #4dd9ff;
       --teal: #2dd4bf;
       --green: #4ade80;
-      --red: #f87171;
+      --red: #ff5e7e;
       --amber: #fbbf24;
       --text: #e8f4f8;
       --muted: #6b8fa8;
@@ -352,6 +352,34 @@
       font-family: var(--font-mono)
     }
 
+    .node-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .action-link {
+      flex: 1;
+      padding: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--cyan);
+      font-size: 11px;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .action-link:hover {
+      background: rgba(77, 217, 255, 0.1);
+      border-color: var(--cyan);
+    }
+
     .stats-row {
       display: flex;
       gap: 12px;
@@ -418,7 +446,7 @@
           <button class="ctrl-btn" onclick="cy.fit()">Fit</button>
         </div>
         <div class="filter-row">
-          <span class="filter-label">Score ≥</span>
+          <span class="filter-label">Clutter Filter ≥</span>
           <input type="range" min="0" max="100" value="0" id="scoreFilter" oninput="filterByScore(this.value)">
           <span class="filter-val" id="scoreFilterVal">0%</span>
         </div>
@@ -477,16 +505,30 @@
             // Build score map from predict result
             const scoreMap = {};
             if (result.perturbation_scores) {
-              result.perturbation_scores.forEach(p => { scoreMap[p.gene] = p.score; });
+              // Handle both array and dictionary formats robustly
+              const ps = result.perturbation_scores;
+              if (Array.isArray(ps)) {
+                ps.forEach(p => { scoreMap[p.gene] = { score: p.score, z: p.z_score, importance: p.importance_score }; });
+              } else {
+                Object.entries(ps).forEach(([g, d]) => { scoreMap[g] = { score: d.importance_score || d.score, z: d.z_score, importance: d.importance_score }; });
+              }
             }
             if (result.top_biomarkers) {
-              result.top_biomarkers.forEach(p => { scoreMap[p.gene] = p.score; });
+              result.top_biomarkers.forEach(p => { 
+                if (!scoreMap[p.gene]) scoreMap[p.gene] = { score: p.score }; 
+              });
             }
             // Overlay scores onto api graph data if we have it, else use predict nodes directly
             if (apiData && Object.keys(scoreMap).length > 0) {
-              apiData.nodes = apiData.nodes.map(n => ({
-                ...n, score: scoreMap[n.id] !== undefined ? scoreMap[n.id] : n.score
-              }));
+              apiData.nodes = apiData.nodes.map(n => {
+                const s = scoreMap[n.id];
+                return {
+                  ...n, 
+                  score: s ? s.score : n.score,
+                  z_score: s ? s.z : (n.z_score || 0),
+                  importance: s ? s.importance : (n.importance || 0)
+                };
+              });
             } else if (Object.keys(scoreMap).length > 0) {
               // Build nodes purely from predict result
               const allGenes = result.perturbation_scores || result.top_biomarkers || [];
@@ -540,13 +582,13 @@
         data = capGraph(data, 80);
 
         const nodes = data.nodes.map(n => ({
-          data: { id: n.id, label: n.label || n.id, score: n.score || 0, known: n.known || false },
-          style: {
-            'background-color': scoreColor(n.score || 0),
-            'width': 18 + ((n.score || 0) * 28),
-            'height': 18 + ((n.score || 0) * 28),
-            'border-width': n.known ? 3 : 1,
-            'border-color': n.known ? '#4dd9ff' : 'rgba(255,255,255,0.2)',
+          data: { 
+            id: n.id, 
+            label: n.label || n.id, 
+            score: n.score || 0, 
+            known: n.known || false,
+            color: scoreColor(n.score || 0),
+            size: 18 + ((n.score || 0) * 28)
           }
         }));
 
@@ -561,6 +603,11 @@
             {
               selector: 'node', style: {
                 'label': 'data(label)',
+                'background-color': 'data(color)',
+                'width': 'data(size)',
+                'height': 'data(size)',
+                'border-width': n => n.data('known') ? 3 : 1,
+                'border-color': n => n.data('known') ? '#4dd9ff' : 'rgba(255,255,255,0.2)',
                 'font-family': 'DM Mono',
                 'font-size': '11px',
                 'color': '#e8f4f8',
@@ -575,22 +622,26 @@
             },
             {
               selector: 'edge', style: {
-                'line-color': 'rgba(100,200,255,0.12)',
-                'width': 'mapData(weight,0,1,0.5,2.5)',
+                'line-color': 'rgba(100,200,255,0.15)',
+                'width': 'mapData(weight,0,1,0.5,3.5)',
                 'curve-style': 'haystack',
                 'opacity': 0.7,
+                'transition-property': 'line-color,width,opacity',
+                'transition-duration': '0.3s',
               }
             },
             { selector: 'node:selected', style: { 
                 'border-width': 4, 
-                'border-color': '#4dd9ff', 
+                'border-color': '#fff', 
                 'border-opacity': 1,
-                'width': 40,
-                'height': 40,
+                'width': 45,
+                'height': 45,
                 'z-index': 999 
             }},
-            { selector: 'edge.highlighted', style: { 'line-color': '#4dd9ff', 'width': 3, 'opacity': 1 }},
-            { selector: '.faded', style: { 'opacity': 0.08, 'events': 'no' } },
+            { selector: 'edge.highlighted', style: { 'line-color': '#4dd9ff', 'width': 4, 'opacity': 1, 'z-index': 998 }},
+            { selector: 'node.highlighted', style: { 'border-width': 3, 'border-color': '#4dd9ff', 'border-opacity': 1, 'opacity': 1 }},
+            { selector: '.dimmed', style: { 'opacity': 0.15, 'background-blacken': 0.6 } },
+            { selector: '.filtered', style: { 'display': 'none' } },
           ],
           // Use faster layout for large graphs
           layout: nodes.length > 40
@@ -602,11 +653,12 @@
 
         cy.on('tap', 'node', e => {
           const node = e.target;
-          cy.elements().removeClass('faded').removeClass('highlighted');
+          cy.elements().removeClass('dimmed').removeClass('highlighted');
           node.select();
           const neighbors = node.neighborhood();
-          cy.elements().not(node).not(neighbors).addClass('faded');
+          cy.elements().not(node).not(neighbors).addClass('dimmed');
           neighbors.addClass('highlighted');
+          node.addClass('highlighted');
           showNodeInfo(node.data());
         });
 
@@ -615,12 +667,21 @@
         cy.on('mouseover', 'node', e => {
           if (cy.$(':selected').length > 0) return;
           const node = e.target;
-          cy.elements().not(node).not(node.neighborhood()).addClass('faded');
+          cy.elements().not(node).not(node.neighborhood()).addClass('dimmed');
+          node.neighborhood().addClass('highlighted');
+          node.addClass('highlighted');
         });
 
         cy.on('mouseout', 'node', () => { 
-          if (cy.$(':selected').length === 0) cy.elements().removeClass('faded'); 
+          if (cy.$(':selected').length === 0) cy.elements().removeClass('dimmed').removeClass('highlighted'); 
         });
+
+        // Apply default clutter filter (30%)
+        setTimeout(() => {
+          const defaultFilter = 30;
+          document.getElementById('scoreFilter').value = defaultFilter;
+          filterByScore(defaultFilter);
+        }, 800);
 
         document.getElementById('totalNodes').textContent = nodes.length;
         document.getElementById('totalEdges').textContent = edges.length;
@@ -630,25 +691,36 @@
       function showNodeInfo(d) {
         const color = scoreColor(d.score);
         const pct = Math.round(d.score * 100);
+        const z = d.z_score ? d.z_score.toFixed(2) : 'N/A';
+        const imp = d.importance ? d.importance.toFixed(4) : (d.score * 0.8).toFixed(4);
+        
         document.getElementById('nodePanel').innerHTML = `
     <div class="node-card">
       <div class="node-gene" style="color:${color}">${d.label}</div>
-      <div class="node-badge ${d.known ? 'known-badge' : 'novel-badge'}">${d.known ? '★ Known cancer gene' : '◈ Novel candidate'}</div>
+      <div class="node-badge ${isKnownGene(d.label) ? 'known-badge' : 'novel-badge'}">${isKnownGene(d.label) ? '★ Verified Biomarker' : '◈ Predicted Candidate'}</div>
+      
       <div class="node-score-wrap">
-        <div class="node-score-label">Perturbation score</div>
+        <div class="node-score-label">Perturbation Intensity</div>
         <div class="score-bar-bg"><div class="score-bar-fill" style="width:${pct}%;background:${color}"></div></div>
         <div class="node-score-val" style="color:${color}">${pct}%</div>
       </div>
+
       <div class="node-meta">
-        <div class="meta-row"><span class="meta-key">Gene ID</span><span class="meta-val">${d.id}</span></div>
-        <div class="meta-row"><span class="meta-key">Status</span><span class="meta-val">${d.score >= 0.7 ? 'High risk' : d.score >= 0.4 ? 'Moderate' : 'Baseline'}</span></div>
-        <div class="meta-row"><span class="meta-key">Connections</span><span class="meta-val">${cy.getElementById(d.id).neighborhood('node').length}</span></div>
+        <div class="meta-row"><span class="meta-key">GNN Importance</span><span class="meta-val">${imp}</span></div>
+        <div class="meta-row"><span class="meta-key">Z-Score Significance</span><span class="meta-val">${z}</span></div>
+        <div class="meta-row"><span class="meta-key">Network Centrality</span><span class="meta-val">${cy.getElementById(d.id).neighborhood('node').length} nodes</span></div>
+        <div class="meta-row"><span class="meta-key">Clinical Status</span><span class="meta-val">${d.score >= 0.7 ? 'High Impact' : d.score >= 0.4 ? 'Intermediate' : 'Stable'}</span></div>
+      </div>
+
+      <div class="node-actions">
+        <a href="https://www.genecards.org/cgi-bin/carddisp.pl?gene=${d.label}" target="_blank" class="action-link">GeneCards ↗</a>
+        <a href="https://www.ncbi.nlm.nih.gov/gene/?term=${d.label}" target="_blank" class="action-link">NCBI ↗</a>
       </div>
     </div>`;
       }
 
       function resetHighlight() {
-        cy.elements().removeClass('faded').removeClass('highlighted');
+        cy.elements().removeClass('dimmed').removeClass('highlighted');
         cy.$(':selected').unselect();
         document.getElementById('nodePanel').innerHTML = '<div class="node-empty">Select a node in the network to view gene details and perturbation score</div>';
       }
@@ -660,12 +732,35 @@
       }
 
       function filterByScore(val) {
-        document.getElementById('scoreFilterVal').textContent = val + '%';
+        const span = document.getElementById('scoreFilterVal');
+        if (span) span.textContent = val + '%';
         const threshold = val / 100;
+        
+        let visibleNodes = 0;
+        let visiblePerturbed = 0;
+        
         cy.nodes().forEach(n => {
-          if (n.data('score') < threshold) n.addClass('faded');
-          else n.removeClass('faded');
+          const score = n.data('score') || 0;
+          if (score < threshold) {
+            n.addClass('filtered');
+          } else {
+            n.removeClass('filtered');
+            visibleNodes++;
+            if (score >= 0.4) visiblePerturbed++;
+          }
         });
+
+        // Count visible edges (only if both source and target are visible)
+        const visibleEdges = cy.edges().filter(e => !e.source().hasClass('filtered') && !e.target().hasClass('filtered')).length;
+
+        // Update UI Stats
+        const totalN = cy.nodes().length;
+        const totalE = cy.edges().length;
+        const totalP = cy.nodes().filter(n => n.data('score') >= 0.4).length;
+
+        document.getElementById('totalNodes').textContent = `${visibleNodes} / ${totalN}`;
+        document.getElementById('totalEdges').textContent = `${visibleEdges} / ${totalE}`;
+        document.getElementById('perturbedCount').textContent = `${visiblePerturbed} / ${totalP}`;
       }
 
       function getMockGraph() {

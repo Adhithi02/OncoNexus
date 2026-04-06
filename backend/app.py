@@ -107,8 +107,30 @@ def status():
 def graph():
     if not graph_cache:
         return jsonify({'error': 'Graph data not found'}), 404
+        
+    # Calculate max importance for normalization across all nodes
+    max_imp = 0.0001 # Avoid div by zero
+    for gene_id in perturbation_cache:
+        max_imp = max(max_imp, perturbation_cache[gene_id].get('importance_score', 0))
+        
+    nodes = []
+    for n in graph_cache.get('nodes', []):
+        node_data = n.copy()
+        gene_id = n['id']
+        if gene_id in perturbation_cache:
+            p = perturbation_cache[gene_id]
+            raw_imp = p.get('importance_score', 0)
+            node_data['importance'] = raw_imp
+            node_data['z_score'] = p.get('z_score', 0)
+            # Normalize score to 0-1 range for frontend filtering (30% = 0.3)
+            node_data['score'] = raw_imp / max_imp
+        else:
+            node_data['score'] = 0
+            
+        nodes.append(node_data)
+        
     return jsonify({
-        'nodes': graph_cache.get('nodes', []),
+        'nodes': nodes,
         'edges': graph_cache.get('edges', [])
     })
 
